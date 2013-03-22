@@ -280,3 +280,5 @@ class HumanPlayer
 	end
 
 end
+
+#test
