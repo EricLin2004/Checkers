@@ -11,7 +11,6 @@ class Checkers
 
 	def run
 		until @gameboard.over?
-			debugger
 			@gameboard.display
 			@current_player.play_turn(@gameboard, prompt)
 			@current_player = (@current_player == @player1) ? @player2 : @player1
@@ -151,6 +150,11 @@ class Board
 	end
 
 	def move_piece(from_loc, to_loc)
+		move_jump_piece(from_loc, to_loc)
+		change_kings_remove_dead(from_loc, to_loc)
+	end
+
+	def move_jump_piece(from_loc, to_loc)
 		if jump?(object_at_loc(from_loc).color, from_loc).include?(to_loc)
 			mid_loc = ['','']
 			tmp = ''
@@ -169,7 +173,9 @@ class Board
 				end
 			end
 		end
+	end
 
+	def change_kings_remove_dead(from_loc, to_loc)
 		if to_loc[0] == 0 || to_loc[0] == 7
 			@field[to_loc[0]][to_loc[1]] = King.new(to_loc, object_at_loc(from_loc).color)
 		else
@@ -179,6 +185,7 @@ class Board
 		@field[from_loc[0]][from_loc[1]] = ''
 		object_at_loc(to_loc).pos = to_loc
 	end
+
 end
 
 class Piece
@@ -232,6 +239,11 @@ class HumanPlayer
 			from_loc, to_loc = get_loc
 		end
 
+		check_double_move(from_loc, to_loc, board, prompt)
+	end
+
+	def check_double_move(from_loc, to_loc, board, prompt)
+		diff = []
 		diff[0] = to_loc[0].abs - from_loc[0].abs
 		diff[1] = to_loc[1].abs - from_loc[1].abs
 		if (diff[0].abs + diff[1].abs) == 2
@@ -281,4 +293,5 @@ class HumanPlayer
 
 end
 
-#test
+x = Checkers.new
+x.run
