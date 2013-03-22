@@ -11,16 +11,18 @@ class Checkers
 
 	def run
 		until @gameboard.over?
+			debugger
 			@gameboard.display
 			@current_player.play_turn(@gameboard, prompt)
 			@current_player = (@current_player == @player1) ? @player2 : @player1
 		end
 
+		@current_player = (@current_player == @player1) ? @player2 : @player1
 		puts "#{@current_player.color} Player wins!"
 	end
 
 	def prompt
-		"#{@current_player.color} Player, what is your move? ex. a1, b2"
+		"#{@current_player.color}".capitalize + " Player, what is your move? ex. a1, b2"
 	end
 end
 
@@ -50,12 +52,20 @@ class Board
     puts
     @field.each_with_index do |row, row_index|
       print "#{row_index} "
-      row.each do |piece|
-       if piece == ''
-         print '   '
-       else
-         print " #{piece.display_piece} "
-       end
+      row.each_with_index do |piece, col_index|
+      	if (row_index + col_index)%2 == 1
+	       if piece == ''
+	         print '   '
+	       else
+	         print " #{piece.display_piece} "
+	       end
+	     else
+	     	if piece == ''
+	         print '   '.colorize(:background => :white)
+	       else
+	         print " #{piece.display_piece} ".colorize(:background => :white)
+	       end
+	     end
      end
      print " #{row_index}"
      puts
@@ -66,7 +76,7 @@ class Board
   end
 
 	def over?
-		piece_count == [0, 0]
+		piece_count[0] == 0 || piece_count[1] == 0
 	end
 
 	def piece_count
@@ -88,17 +98,17 @@ class Board
 
 	def valid_move?(color, from_loc, to_loc)
 		return false if object_at_loc(from_loc) == ''
-		p '1'
+
 		return false if object_at_loc(from_loc).color != color
-		p '2'		
+	
 		return false unless object_at_loc(to_loc) == ''
-		p '3'
+
 		return false unless in_bounds?(from_loc) && in_bounds?(to_loc)
-		p '4'
+
 		return true if possible_shift?(from_loc, to_loc)
-		p '5'
+
 		return false unless jump?(color, from_loc).include?(to_loc)	
-		p '6'
+
 		true
 	end
 
@@ -117,23 +127,18 @@ class Board
 		mid_loc = ['','']
 		final_loc = ['','']
 		object_at_loc(from_loc).dxdy.each do |move|
-			p "jump_pos1 #{jump_pos}"
 			mid_loc[0], mid_loc[1] = (from_loc[0] + move[0]), (from_loc[1] + move[1])
 			if in_bounds?(mid_loc)
 				unless object_at_loc(mid_loc) == ''
 					if object_at_loc(mid_loc).color != color
 						final_loc[0], final_loc[1] = (from_loc[0] + 2*move[0]), (from_loc[1] + 2*move[1])
-						debugger
 						if in_bounds?(final_loc)
-							p "final #{final_loc}"
-							jump_pos << final_loc
-							p "jump_pos2 #{jump_pos}"
+							jump_pos << final_loc.dup
 						end
 					end
 				end
 			end
 		end
-		p "jump_pos3 #{jump_pos}"
 		jump_pos
 	end
 
@@ -151,12 +156,14 @@ class Board
 			tmp = ''
 			object_at_loc(from_loc).dxdy.each do |move|
 				mid_loc[0], mid_loc[1] = (from_loc[0] + move[0]), (from_loc[1] + move[1])
-				unless object_at_loc(mid_loc) == ''
-					if object_at_loc(mid_loc).color != object_at_loc(from_loc).color
-						tmp = mid_loc.dup
-						mid_loc[0], mid_loc[1] = (from_loc[0] + 2*move[0]), (from_loc[1] + 2*move[1])
-						if mid_loc == to_loc
-							@field[tmp[0]][tmp[1]] = ''
+				if in_bounds?(mid_loc)
+					unless object_at_loc(mid_loc) == ''
+						if object_at_loc(mid_loc).color != object_at_loc(from_loc).color
+							tmp = mid_loc.dup
+							mid_loc[0], mid_loc[1] = (from_loc[0] + 2*move[0]), (from_loc[1] + 2*move[1])
+							if mid_loc == to_loc
+								@field[tmp[0]][tmp[1]] = ''
+							end
 						end
 					end
 				end
@@ -167,24 +174,25 @@ class Board
 			@field[to_loc[0]][to_loc[1]] = King.new(to_loc, object_at_loc(from_loc).color)
 		else
 			@field[to_loc[0]][to_loc[1]] = @field[from_loc[0]][from_loc[1]]
-			@field[from_loc[0]][from_loc[1]] = ''
 		end
 
+		@field[from_loc[0]][from_loc[1]] = ''
 		object_at_loc(to_loc).pos = to_loc
 	end
 end
 
 class Piece
 	attr_reader :color
-	attr_accessor :pos
+	attr_accessor :pos, :sym
 
 	def initialize(pos, color)
 		@color = color
 		@pos = pos
+		@sym = 'O'
 	end
 
 	def display_piece
-		'O'.colorize(@color)
+		@sym.colorize(@color)
 	end
 
 	def dxdy
@@ -197,8 +205,9 @@ class Piece
 end
 
 class King < Piece
-	def initialize
-		super
+	def initialize(pos, color)
+		super(pos, color)
+		@sym = 'K'
 	end
 
 	def dxdy
@@ -219,18 +228,17 @@ class HumanPlayer
 		from_loc, to_loc = get_loc
 
 		until board.valid_move?(@color, from_loc, to_loc)
-			puts "Invalid move. Try again ex. a1, b2"
+			puts "Invalid move. Try again ex. a1,b2"
 			from_loc, to_loc = get_loc
 		end
 
 		diff[0] = to_loc[0].abs - from_loc[0].abs
 		diff[1] = to_loc[1].abs - from_loc[1].abs
-		p diff
 		if (diff[0].abs + diff[1].abs) == 2
 			board.move_piece(from_loc, to_loc)
 		else
 			board.move_piece(from_loc, to_loc)
-			unless board.jump?(color, to_loc).empty?
+			unless object_at_jump?(board, @color, to_loc)
 				puts prompt
 				board.display
 				play_turn(board, next_prompt)
@@ -238,8 +246,19 @@ class HumanPlayer
 		end
 	end
 
+	def object_at_jump?(board, color, to_loc)
+		jump = board.jump?(color, to_loc)
+		return true if jump.empty?
+		jump.each do |space|
+			if board.object_at_loc(space) == ''
+				return false
+			end
+		end
+		true
+	end
+
 	def next_prompt
-		"#{@color} Player, you may move again if you wish to? ex. a1, b2"
+		"#{@color}".capitalize + " Player you must move again, choose your destination. ex. a1,b2"
 	end
 
 	def get_loc
