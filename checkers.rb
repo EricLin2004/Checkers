@@ -1,5 +1,6 @@
 require 'colorize'
 require 'debugger'
+
 class Checkers
 	
 	def initialize
